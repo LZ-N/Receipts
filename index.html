@@ -47,6 +47,8 @@
     margin-top: 10px;
     margin-bottom: 3px;
   }
+  select { width: 100%; padding: 6px 8px; font-family: Arial, sans-serif; font-size: 24px; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+  .hint { font-family: Arial, sans-serif; font-size: 18px; color: #777; margin-top: 2px; }
   input, textarea {
     width: 100%;
     padding: 6px 8px;
@@ -57,7 +59,7 @@
   }
   .item-row {
     display: grid;
-    grid-template-columns: 1fr 60px 70px 30px;
+    grid-template-columns: 1fr 52px 70px 62px 30px;
     gap: 6px;
     margin-top: 6px;
     align-items: center;
@@ -121,6 +123,10 @@
     justify-content: space-between;
     margin-top: 4px;
   }
+  #receipt-wrapper .demo { font-size: 16px; text-align: center; margin-top: 12px; border-top: 1px dashed #444; padding-top: 6px; }
+  #receipt-wrapper .one-line { display: flex; justify-content: space-between; gap: 6px; }
+  #receipt-wrapper .one-line .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  #receipt-wrapper .right { text-align: right; }
   #receipt-wrapper .small-note {
     font-size: 20px;
     text-align: center;
@@ -131,7 +137,7 @@
     body { padding: 8px; gap: 14px; }
     .panel { padding: 14px; }
     #receipt-wrapper { max-width: 100%; }
-    .item-row { grid-template-columns: minmax(0, 1fr) 48px 62px 28px; gap: 4px; }
+    .item-row { grid-template-columns: minmax(0, 1fr) 44px 58px 52px 28px; gap: 3px; }
   }
 
   @media print {
@@ -150,7 +156,14 @@
 <body>
 
 <div class="panel">
-  <h2>Dane sprzedawcy</h2>
+  <h2>Szablon</h2>
+  <select id="template">
+    <option value="classic">Klasyczny (obecny)</option>
+    <option value="detailed">Szczegółowy (obniżki, karta)</option>
+    <option value="oneline">Jednoliniowy (gotówka, reszta)</option>
+  </select>
+
+  <h2 style="margin-top:20px;">Dane sprzedawcy</h2>
   <label>Nazwa firmy</label>
   <input id="storeName" value="MOJA FIRMA SP. Z O.O.">
   <label>Adres (linia 1)</label>
@@ -159,10 +172,18 @@
   <input id="addr2" value="00-000 MIASTO">
   <label>NIP</label>
   <input id="nip" value="000-000-00-00">
+  <label>Sprzedawca</label>
+  <input id="sellerName" value="Jan Kowalski">
+  <label>Nr kasy</label>
+  <input id="registerNo" value="1">
+  <label>Nr kasjera</label>
+  <input id="cashierNo" value="1">
 
-  <h2 style="margin-top:20px;">Paragon</h2>
-  <label>Numer paragonu</label>
+  <h2 style="margin-top:20px;">Rachunek</h2>
+  <label>Numer rachunku</label>
   <input id="receiptNo" value="1">
+  <label>Nr transakcji</label>
+  <input id="txnNo" value="0001">
   <label>Data i godzina</label>
   <input id="dateTime" type="datetime-local">
 
@@ -176,8 +197,11 @@
 
   <label>Sposób płatności</label>
   <input id="payMethod" value="GOTÓWKA">
+  <label>Wpłacono gotówką (opcjonalnie)</label>
+  <input id="cashGiven" type="number" step="0.01" placeholder="np. 150">
+  <div class="hint">Jeśli wyższe niż suma, pokaże resztę.</div>
 
-  <button class="btn-print" onclick="window.print()">🖨️ Drukuj paragon</button>
+  <button class="btn-print" onclick="window.print()">🖨️ Drukuj rachunek</button>
   <button class="btn-export btn-pdf" onclick="saveAsPDF()">📄 Zapisz jako PDF</button>
   <button class="btn-export btn-jpg" onclick="saveAsJPG()">🖼️ Zapisz jako JPG</button>
   <div class="export-status" id="exportStatus"></div>
@@ -187,8 +211,12 @@
 
 <script>
 let items = [
-  { name: "Produkt przykładowy", qty: 1, price: 100.00 }
+  { name: "Produkt przykładowy", qty: 1, price: 100.00, discount: 0 }
 ];
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 function renderItemInputs() {
   const container = document.getElementById('items');
@@ -197,9 +225,10 @@ function renderItemInputs() {
     const row = document.createElement('div');
     row.className = 'item-row';
     row.innerHTML = `
-      <input type="text" value="${item.name}" oninput="updateItem(${idx}, 'name', this.value)" placeholder="Nazwa">
+      <input type="text" value="${esc(item.name)}" oninput="updateItem(${idx}, 'name', this.value)" placeholder="Nazwa">
       <input type="number" value="${item.qty}" step="1" oninput="updateItem(${idx}, 'qty', this.value)" placeholder="Ilość">
       <input type="number" value="${item.price}" step="0.01" oninput="updateItem(${idx}, 'price', this.value)" placeholder="Cena">
+      <input type="number" value="${item.discount || ''}" step="0.01" min="0" oninput="updateItem(${idx}, 'discount', this.value)" placeholder="Rabat">
       <button class="btn-remove" onclick="removeItem(${idx})">✕</button>
     `;
     container.appendChild(row);
@@ -207,7 +236,7 @@ function renderItemInputs() {
 }
 
 function addItem() {
-  items.push({ name: "", qty: 1, price: 0 });
+  items.push({ name: "", qty: 1, price: 0, discount: 0 });
   renderItemInputs();
   renderReceipt();
 }
@@ -219,7 +248,7 @@ function removeItem(idx) {
 }
 
 function updateItem(idx, field, value) {
-  if (field === 'qty' || field === 'price') {
+  if (field === 'qty' || field === 'price' || field === 'discount') {
     items[idx][field] = parseFloat(value) || 0;
   } else {
     items[idx][field] = value;
@@ -231,62 +260,144 @@ function fmt(n) {
   return n.toFixed(2).replace('.', ',');
 }
 
+const DEMO_LINE = 'DOKUMENT DEMONSTRACYJNY – NIE JEST PARAGONEM FISKALNYM';
+
 function renderReceipt() {
-  const storeName = document.getElementById('storeName').value;
-  const addr1 = document.getElementById('addr1').value;
-  const addr2 = document.getElementById('addr2').value;
-  const nip = document.getElementById('nip').value;
-  const receiptNo = document.getElementById('receiptNo').value;
-  const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
-  const payMethod = document.getElementById('payMethod').value;
+  const val = id => document.getElementById(id).value;
+  const tpl = val('template');
+  const storeName = esc(val('storeName'));
+  const addr1 = esc(val('addr1'));
+  const addr2 = esc(val('addr2'));
+  const nip = esc(val('nip'));
+  const seller = esc(val('sellerName'));
+  const registerNo = esc(val('registerNo'));
+  const cashierNo = esc(val('cashierNo'));
+  const receiptNo = esc(val('receiptNo'));
+  const txnNo = esc(val('txnNo'));
+  const vatRate = parseFloat(val('vatRate')) || 0;
+  const payMethod = esc(val('payMethod'));
+  const cashGiven = parseFloat(val('cashGiven')) || 0;
 
-  let dt = document.getElementById('dateTime').value;
-  let dateStr, timeStr;
-  if (dt) {
-    const d = new Date(dt);
-    dateStr = d.toLocaleDateString('pl-PL');
-    timeStr = d.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'});
-  } else {
-    const now = new Date();
-    dateStr = now.toLocaleDateString('pl-PL');
-    timeStr = now.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'});
-  }
+  const d = val('dateTime') ? new Date(val('dateTime')) : new Date();
+  const dateStr = d.toLocaleDateString('pl-PL');
+  const timeStr = d.toLocaleTimeString('pl-PL', {hour: '2-digit', minute: '2-digit'});
 
-  let total = 0;
-  let itemsHtml = '';
-  items.forEach(item => {
-    const lineTotal = item.qty * item.price;
-    total += lineTotal;
-    itemsHtml += `
-      <div class="item-name">${item.name || '—'}</div>
-      <div class="qty-line"><span>${item.qty} x ${fmt(item.price)}</span><span class="bold">${fmt(lineTotal)}A</span></div>
-    `;
+  let total = 0, totalDiscount = 0;
+  items.forEach(it => {
+    const disc = Math.min(it.discount || 0, it.qty * it.price);
+    it._disc = disc;
+    it._line = it.qty * it.price - disc;
+    total += it._line;
+    totalDiscount += disc;
   });
+  const vatAmount = total - total / (1 + vatRate / 100);
+  const change = cashGiven > 0 ? cashGiven - total : 0;
 
-  const netTotal = total / (1 + vatRate/100);
-  const vatAmount = total - netTotal;
-
-  const html = `
+  const header = `
     <div class="center bold">${storeName}</div>
     <div class="center">${addr1}</div>
     <div class="center">${addr2}</div>
     <div class="center">NIP: ${nip}</div>
-    <hr>
-    <div class="center">${dateStr} ${timeStr}</div>
-    <div class="center big">PARAGON FISKALNY</div>
-    <hr>
-    ${itemsHtml}
-    <hr>
+    <hr>`;
+  const footer = `<div class="demo">${DEMO_LINE}</div>`;
+
+  const vatBlock = `
     <div class="line"><span>SPRZEDAŻ OPODATKOWANA A</span></div>
     <div class="line"><span></span><span>${fmt(total)}</span></div>
     <div class="line"><span>PTU A ${fmt(vatRate)} %</span><span>${fmt(vatAmount)}</span></div>
-    <div class="line"><span>SUMA PTU</span><span>${fmt(vatAmount)}</span></div>
-    <div class="suma"><span>SUMA PLN</span><span>${fmt(total)}</span></div>
-    <hr>
-    <div class="line"><span>Nr paragonu #</span><span>${receiptNo}</span></div>
-    <div class="line"><span>${payMethod}</span><span>${fmt(total)} PLN</span></div>
-    <div class="small-note">Dziękujemy za zakupy</div>
-  `;
+    <div class="line"><span>SUMA PTU</span><span>${fmt(vatAmount)}</span></div>`;
+
+  let html = '';
+
+  if (tpl === 'classic') {
+    let itemsHtml = '';
+    items.forEach(it => {
+      itemsHtml += `
+        <div class="item-name">${esc(it.name) || '—'}</div>
+        <div class="qty-line"><span>${it.qty} x ${fmt(it.price)}</span><span class="bold">${fmt(it._line)}A</span></div>
+        ${it._disc ? `<div class="qty-line"><span>OBNIŻKA</span><span>-${fmt(it._disc)}</span></div>` : ''}`;
+    });
+    html = `
+      ${header}
+      <div class="center">${dateStr} ${timeStr}</div>
+      <div class="center big">RACHUNEK</div>
+      <hr>
+      ${itemsHtml}
+      <hr>
+      ${vatBlock}
+      <div class="suma"><span>SUMA PLN</span><span>${fmt(total)}</span></div>
+      <hr>
+      <div class="line"><span>Nr rachunku #</span><span>${receiptNo}</span></div>
+      <div class="line"><span>${payMethod}</span><span>${fmt(total)} PLN</span></div>
+      <div class="small-note">Dziękujemy za zakupy</div>
+      ${footer}`;
+  }
+
+  if (tpl === 'detailed') {
+    let itemsHtml = '';
+    items.forEach(it => {
+      itemsHtml += `
+        <div class="item-name">${esc(it.name) || '—'}</div>
+        <div class="line"><span>${it.qty} x ${fmt(it.price)}</span><span class="bold">${fmt(it.qty * it.price)}A</span></div>
+        ${it._disc ? `<div class="line"><span>OBNIŻKA</span><span>-${fmt(it._disc)}</span></div>` : ''}`;
+    });
+    html = `
+      <div class="center bold">${storeName}</div>
+      <div class="center">${addr1}, ${addr2}</div>
+      <div class="center">NIP: ${nip}</div>
+      <hr>
+      <div class="center big">RACHUNEK</div>
+      <hr>
+      ${itemsHtml}
+      <hr>
+      ${totalDiscount ? `<div class="line"><span>Suma obniżek:</span><span>${fmt(totalDiscount)}</span></div>` : ''}
+      ${vatBlock}
+      <div class="suma"><span>SUMA:</span><span>PLN ${fmt(total)}</span></div>
+      <div class="suma" style="font-size:23px"><span>DO ZAPŁATY:</span><span>${fmt(total)}</span></div>
+      <hr>
+      <div class="center">ROZLICZENIE PŁATNOŚCI</div>
+      <div class="line"><span>${payMethod}:</span><span>${fmt(total)}</span></div>
+      ${cashGiven > 0 && change >= 0 ? `<div class="line"><span>Wpłacono:</span><span>${fmt(cashGiven)}</span></div><div class="line"><span>Reszta:</span><span>${fmt(change)}</span></div>` : ''}
+      <hr>
+      <div class="line"><span>#Kasa ${registerNo} Kasjer nr ${cashierNo}</span></div>
+      <div class="line"><span>${dateStr} ${timeStr}</span></div>
+      <div class="line"><span>Sprzedawca:</span><span>${seller}</span></div>
+      <div class="line"><span>Nr rachunku:</span><span>${receiptNo}</span></div>
+      <div class="line"><span>Nr transakcji:</span><span>${txnNo}</span></div>
+      ${footer}`;
+  }
+
+  if (tpl === 'oneline') {
+    let itemsHtml = '';
+    items.forEach(it => {
+      itemsHtml += `
+        <div class="one-line"><span class="nm">${esc(it.name) || '—'}</span><span>${it.qty} x ${fmt(it.price)}</span><span class="bold">${fmt(it.qty * it.price)}A</span></div>
+        ${it._disc ? `<div class="one-line"><span class="nm">OBNIŻKA</span><span>-${fmt(it._disc)}</span></div>` : ''}`;
+    });
+    html = `
+      <div class="center bold">${storeName}</div>
+      <div class="center">${addr1} ${addr2}</div>
+      <div class="center">NIP: ${nip}</div>
+      <div class="center big">RACHUNEK</div>
+      <hr>
+      ${itemsHtml}
+      <hr>
+      <div class="line"><span>Sprzedaż opodatkowana A:</span><span>${fmt(total)}</span></div>
+      <div class="line"><span>Kwota PTU A ${fmt(vatRate)}%</span><span>${fmt(vatAmount)}</span></div>
+      <div class="line"><span>SUMA PTU</span><span>${fmt(vatAmount)}</span></div>
+      <div class="suma"><span>SUMA:</span><span>PLN ${fmt(total)}</span></div>
+      <div class="suma" style="font-size:23px"><span>DO ZAPŁATY:</span><span>${fmt(total)}</span></div>
+      <div class="center">ROZLICZENIE PŁATNOŚCI</div>
+      <div class="line"><span>${payMethod}:</span><span>${cashGiven > 0 ? fmt(cashGiven) : fmt(total)}</span></div>
+      ${cashGiven > 0 && change >= 0 ? `<div class="line"><span>Reszta:</span><span>${fmt(change)}</span></div>` : ''}
+      <hr>
+      <div class="line"><span>#Kasa ${registerNo} Kasjer nr ${cashierNo}</span></div>
+      <div class="right">${dateStr} ${timeStr}</div>
+      <div class="line"><span>Sprzedawca:</span><span>${seller}</span></div>
+      <div class="line"><span>Nr rachunku:</span><span>${receiptNo}</span></div>
+      <div class="line"><span>Nr transakcji:</span><span>${txnNo}</span></div>
+      ${footer}`;
+  }
 
   document.getElementById('receipt-wrapper').innerHTML = html;
 }
@@ -296,8 +407,16 @@ document.getElementById('dateTime').value = new Date().toISOString().slice(0,16)
 renderItemInputs();
 renderReceipt();
 
-document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #receiptNo, #dateTime, #vatRate, #payMethod')
+document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #sellerName, #registerNo, #cashierNo, #receiptNo, #txnNo, #dateTime, #vatRate, #payMethod, #cashGiven')
   .forEach(el => el.addEventListener('input', renderReceipt));
+
+const tplSel = document.getElementById('template');
+try { const saved = localStorage.getItem('receiptTemplate'); if (saved) tplSel.value = saved; } catch (e) {}
+tplSel.addEventListener('change', () => {
+  try { localStorage.setItem('receiptTemplate', tplSel.value); } catch (e) {}
+  renderReceipt();
+});
+renderReceipt();
 
 function setStatus(msg) {
   document.getElementById('exportStatus').textContent = msg;
@@ -305,8 +424,8 @@ function setStatus(msg) {
 }
 
 function filenameBase() {
-  const no = document.getElementById('receiptNo').value || 'paragon';
-  return 'paragon_' + String(no).replace(/[^a-zA-Z0-9_-]/g, '');
+  const no = document.getElementById('receiptNo').value || 'rachunek';
+  return 'rachunek_' + String(no).replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
 async function captureReceipt() {

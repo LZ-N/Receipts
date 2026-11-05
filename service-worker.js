@@ -1,5 +1,5 @@
 
-const CACHE_NAME = "generator-paragonow-v1";
+const CACHE_NAME = "generator-paragonow-v2";
 
 const APP_SHELL = [
   "./",
