@@ -103,6 +103,7 @@
     border-top: 1px dashed #444;
     margin: 6px 0;
   }
+  #receipt-wrapper hr.dots { border-top: 2px dotted #444; }
   #receipt-wrapper .line {
     display: flex;
     justify-content: space-between;
@@ -366,6 +367,7 @@ function renderReceipt() {
       ${totalDiscount ? `<div class="line"><span>Suma obniżek:</span><span>${fmt(totalDiscount)}</span></div>` : ''}
       ${vatBlock}
       <div class="suma"><span>SUMA:</span><span>PLN ${fmt(total)}</span></div>
+      <hr class="dots">
       <div class="suma" style="font-size:23px"><span>DO ZAPŁATY:</span><span>${fmt(total)}</span></div>
       <hr>
       <div class="center">ROZLICZENIE PŁATNOŚCI</div>
@@ -399,6 +401,7 @@ function renderReceipt() {
       <div class="line"><span>Kwota PTU A ${fmt(vatRate)}%</span><span>${fmt(vatAmount)}</span></div>
       <div class="line"><span>SUMA PTU</span><span>${fmt(vatAmount)}</span></div>
       <div class="suma"><span>SUMA:</span><span>PLN ${fmt(total)}</span></div>
+      <hr class="dots">
       <div class="suma" style="font-size:23px"><span>DO ZAPŁATY:</span><span>${fmt(total)}</span></div>
       <div class="center">ROZLICZENIE PŁATNOŚCI</div>
       <div class="line"><span>${payMethod}:</span><span>${cashGiven > 0 ? fmt(cashGiven) : fmt(total)}</span></div>
