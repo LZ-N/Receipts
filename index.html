@@ -11,6 +11,7 @@
 <title>Generator paragonów</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <style>
   :root {
     --paper-width: 320px;
@@ -126,6 +127,8 @@
   #receipt-wrapper .demo { font-size: 16px; text-align: center; margin-top: 12px; border-top: 1px dashed #444; padding-top: 6px; }
   #receipt-wrapper .one-line { display: flex; justify-content: space-between; gap: 6px; }
   #receipt-wrapper .one-line .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  #receipt-wrapper .barcode { text-align: center; margin-top: 10px; }
+  #receipt-wrapper .barcode img { max-width: 100%; height: auto; }
   #receipt-wrapper .right { text-align: right; }
   #receipt-wrapper .small-note {
     font-size: 20px;
@@ -184,6 +187,7 @@
   <input id="receiptNo" value="1">
   <label>Nr transakcji</label>
   <input id="txnNo" value="0001">
+  <label style="display:flex;align-items:center;gap:8px;"><input id="showBarcode" type="checkbox" checked style="width:auto;"> Kod kreskowy z numeru rachunku</label>
   <label>Data i godzina</label>
   <input id="dateTime" type="datetime-local">
 
@@ -260,6 +264,15 @@ function fmt(n) {
   return n.toFixed(2).replace('.', ',');
 }
 
+function barcodeHtml(value) {
+  if (!document.getElementById('showBarcode').checked || !value || typeof JsBarcode === 'undefined') return '';
+  try {
+    const c = document.createElement('canvas');
+    JsBarcode(c, value, { format: 'CODE128', width: 2, height: 60, margin: 0, displayValue: true, fontSize: 16, textMargin: 2, background: '#ffffff' });
+    return `<div class="barcode"><img alt="" src="${c.toDataURL('image/png')}"></div>`;
+  } catch (e) { return ''; }
+}
+
 const DEMO_LINE = 'DOKUMENT DEMONSTRACYJNY – NIE JEST PARAGONEM FISKALNYM';
 
 function renderReceipt() {
@@ -299,7 +312,7 @@ function renderReceipt() {
     <div class="center">${addr2}</div>
     <div class="center">NIP: ${nip}</div>
     <hr>`;
-  const footer = `<div class="demo">${DEMO_LINE}</div>`;
+  const footer = `${barcodeHtml(val('receiptNo'))}<div class="demo">${DEMO_LINE}</div>`;
 
   const vatBlock = `
     <div class="line"><span>SPRZEDAŻ OPODATKOWANA A</span></div>
@@ -407,8 +420,9 @@ document.getElementById('dateTime').value = new Date().toISOString().slice(0,16)
 renderItemInputs();
 renderReceipt();
 
-document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #sellerName, #registerNo, #cashierNo, #receiptNo, #txnNo, #dateTime, #vatRate, #payMethod, #cashGiven')
+document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #sellerName, #registerNo, #cashierNo, #receiptNo, #txnNo, #showBarcode, #dateTime, #vatRate, #payMethod, #cashGiven')
   .forEach(el => el.addEventListener('input', renderReceipt));
+document.getElementById('showBarcode').addEventListener('change', renderReceipt);
 
 const tplSel = document.getElementById('template');
 try { const saved = localStorage.getItem('receiptTemplate'); if (saved) tplSel.value = saved; } catch (e) {}
