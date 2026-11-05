@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Generator paragonów</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --paper-width: 320px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Courier New', monospace;
+    background: #e9e9e9;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .panel {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    width: 380px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  .panel h2 {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    margin-top: 0;
+  }
+  label {
+    display: block;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color: #333;
+    margin-top: 10px;
+    margin-bottom: 3px;
+  }
+  input, textarea {
+    width: 100%;
+    padding: 6px 8px;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  .item-row {
+    display: grid;
+    grid-template-columns: 1fr 60px 70px 30px;
+    gap: 6px;
+    margin-top: 6px;
+    align-items: center;
+  }
+  .item-row input { padding: 5px; font-size: 12px; }
+  button {
+    font-family: Arial, sans-serif;
+    cursor: pointer;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .btn-add { background: #eee; color: #333; }
+  .btn-remove { background: #f4d4d4; color: #900; padding: 4px 8px; font-size: 12px; }
+  .btn-print { background: #2e7d32; color: #fff; width: 100%; font-size: 14px; padding: 10px; margin-top: 16px; }
+  .btn-export { color: #fff; width: 100%; font-size: 13px; padding: 9px; margin-top: 8px; }
+  .btn-pdf { background: #c62828; }
+  .btn-jpg { background: #1565c0; }
+  .export-status { font-family: Arial, sans-serif; font-size: 11px; color: #666; text-align: center; margin-top: 4px; min-height: 14px; }
+  .vat-row { display: grid; grid-template-columns: 1fr 60px 30px; gap: 6px; margin-top: 6px; }
+
+  /* --- RECEIPT --- */
+  #receipt-wrapper {
+    width: var(--paper-width);
+    background: #fff;
+    padding: 14px 16px 30px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.2);
+    font-family: 'Courier New', monospace;
+    font-size: 11.5px;
+    line-height: 1.35;
+    color: #111;
+  }
+  #receipt-wrapper .center { text-align: center; }
+  #receipt-wrapper .bold { font-weight: bold; }
+  #receipt-wrapper .big { font-size: 15px; font-weight: bold; }
+  #receipt-wrapper hr {
+    border: none;
+    border-top: 1px dashed #444;
+    margin: 6px 0;
+  }
+  #receipt-wrapper .line {
+    display: flex;
+    justify-content: space-between;
+    white-space: pre;
+  }
+  #receipt-wrapper .item-name {
+    white-space: normal;
+  }
+  #receipt-wrapper .qty-line {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  #receipt-wrapper .totals .line { font-size: 12px; }
+  #receipt-wrapper .suma {
+    font-size: 17px;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+  #receipt-wrapper .small-note {
+    font-size: 10px;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  @media print {
+    body * { visibility: hidden; }
+    #receipt-wrapper, #receipt-wrapper * { visibility: visible; }
+    #receipt-wrapper {
+      position: absolute;
+      top: 0; left: 0;
+      box-shadow: none;
+      width: 80mm;
+    }
+    .panel, .btn-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h2>Dane sprzedawcy</h2>
+  <label>Nazwa firmy</label>
+  <input id="storeName" value="MOJA FIRMA SP. Z O.O.">
+  <label>Adres (linia 1)</label>
+  <input id="addr1" value="UL. PRZYKŁADOWA 1">
+  <label>Adres (linia 2)</label>
+  <input id="addr2" value="00-000 MIASTO">
+  <label>NIP</label>
+  <input id="nip" value="000-000-00-00">
+
+  <h2 style="margin-top:20px;">Paragon</h2>
+  <label>Numer paragonu</label>
+  <input id="receiptNo" value="1">
+  <label>Data i godzina</label>
+  <input id="dateTime" type="datetime-local">
+
+  <h2 style="margin-top:20px;">Pozycje</h2>
+  <div id="items"></div>
+  <button class="btn-add" onclick="addItem()">+ Dodaj pozycję</button>
+
+  <h2 style="margin-top:20px;">Stawka VAT</h2>
+  <label>Stawka VAT (%)</label>
+  <input id="vatRate" value="23" type="number">
+
+  <label>Sposób płatności</label>
+  <input id="payMethod" value="GOTÓWKA">
+
+  <button class="btn-print" onclick="window.print()">🖨️ Drukuj paragon</button>
+  <button class="btn-export btn-pdf" onclick="saveAsPDF()">📄 Zapisz jako PDF</button>
+  <button class="btn-export btn-jpg" onclick="saveAsJPG()">🖼️ Zapisz jako JPG</button>
+  <div class="export-status" id="exportStatus"></div>
+</div>
+
+<div id="receipt-wrapper"></div>
+
+<script>
+let items = [
+  { name: "Produkt przykładowy", qty: 1, price: 100.00 }
+];
+
+function renderItemInputs() {
+  const container = document.getElementById('items');
+  container.innerHTML = '';
+  items.forEach((item, idx) => {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <input type="text" value="${item.name}" oninput="updateItem(${idx}, 'name', this.value)" placeholder="Nazwa">
+      <input type="number" value="${item.qty}" step="1" oninput="updateItem(${idx}, 'qty', this.value)" placeholder="Ilość">
+      <input type="number" value="${item.price}" step="0.01" oninput="updateItem(${idx}, 'price', this.value)" placeholder="Cena">
+      <button class="btn-remove" onclick="removeItem(${idx})">✕</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function addItem() {
+  items.push({ name: "", qty: 1, price: 0 });
+  renderItemInputs();
+  renderReceipt();
+}
+
+function removeItem(idx) {
+  items.splice(idx, 1);
+  renderItemInputs();
+  renderReceipt();
+}
+
+function updateItem(idx, field, value) {
+  if (field === 'qty' || field === 'price') {
+    items[idx][field] = parseFloat(value) || 0;
+  } else {
+    items[idx][field] = value;
+  }
+  renderReceipt();
+}
+
+function fmt(n) {
+  return n.toFixed(2).replace('.', ',');
+}
+
+function renderReceipt() {
+  const storeName = document.getElementById('storeName').value;
+  const addr1 = document.getElementById('addr1').value;
+  const addr2 = document.getElementById('addr2').value;
+  const nip = document.getElementById('nip').value;
+  const receiptNo = document.getElementById('receiptNo').value;
+  const vatRate = parseFloat(document.getElementById('vatRate').value) || 0;
+  const payMethod = document.getElementById('payMethod').value;
+
+  let dt = document.getElementById('dateTime').value;
+  let dateStr, timeStr;
+  if (dt) {
+    const d = new Date(dt);
+    dateStr = d.toLocaleDateString('pl-PL');
+    timeStr = d.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'});
+  } else {
+    const now = new Date();
+    dateStr = now.toLocaleDateString('pl-PL');
+    timeStr = now.toLocaleTimeString('pl-PL', {hour: '2-digit', minute:'2-digit'});
+  }
+
+  let total = 0;
+  let itemsHtml = '';
+  items.forEach(item => {
+    const lineTotal = item.qty * item.price;
+    total += lineTotal;
+    itemsHtml += `
+      <div class="item-name">${item.name || '—'}</div>
+      <div class="qty-line"><span>${item.qty} x ${fmt(item.price)}</span><span class="bold">${fmt(lineTotal)}A</span></div>
+    `;
+  });
+
+  const netTotal = total / (1 + vatRate/100);
+  const vatAmount = total - netTotal;
+
+  const html = `
+    <div class="center bold">${storeName}</div>
+    <div class="center">${addr1}</div>
+    <div class="center">${addr2}</div>
+    <div class="center">NIP: ${nip}</div>
+    <hr>
+    <div class="center">${dateStr} ${timeStr}</div>
+    <div class="center big">PARAGON FISKALNY</div>
+    <hr>
+    ${itemsHtml}
+    <hr>
+    <div class="line"><span>SPRZEDAŻ OPODATKOWANA A</span></div>
+    <div class="line"><span></span><span>${fmt(total)}</span></div>
+    <div class="line"><span>PTU A ${fmt(vatRate)} %</span><span>${fmt(vatAmount)}</span></div>
+    <div class="line"><span>SUMA PTU</span><span>${fmt(vatAmount)}</span></div>
+    <div class="suma"><span>SUMA PLN</span><span>${fmt(total)}</span></div>
+    <hr>
+    <div class="line"><span>Nr paragonu #</span><span>${receiptNo}</span></div>
+    <div class="line"><span>${payMethod}</span><span>${fmt(total)} PLN</span></div>
+    <div class="small-note">Dziękujemy za zakupy</div>
+  `;
+
+  document.getElementById('receipt-wrapper').innerHTML = html;
+}
+
+// Init
+document.getElementById('dateTime').value = new Date().toISOString().slice(0,16);
+renderItemInputs();
+renderReceipt();
+
+document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #receiptNo, #dateTime, #vatRate, #payMethod')
+  .forEach(el => el.addEventListener('input', renderReceipt));
+
+function setStatus(msg) {
+  document.getElementById('exportStatus').textContent = msg;
+  setTimeout(() => { document.getElementById('exportStatus').textContent = ''; }, 3000);
+}
+
+function filenameBase() {
+  const no = document.getElementById('receiptNo').value || 'paragon';
+  return 'paragon_' + String(no).replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+async function captureReceipt() {
+  const node = document.getElementById('receipt-wrapper');
+  return await html2canvas(node, {
+    scale: 3,
+    backgroundColor: '#ffffff',
+    useCORS: true
+  });
+}
+
+async function saveAsJPG() {
+  setStatus('Generowanie JPG...');
+  try {
+    const canvas = await captureReceipt();
+    const link = document.createElement('a');
+    link.download = filenameBase() + '.jpg';
+    link.href = canvas.toDataURL('image/jpeg', 0.95);
+    link.click();
+    setStatus('Zapisano JPG ✓');
+  } catch (err) {
+    console.error(err);
+    setStatus('Błąd podczas zapisu JPG');
+  }
+}
+
+async function saveAsPDF() {
+  setStatus('Generowanie PDF...');
+  try {
+    const canvas = await captureReceipt();
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+    const { jsPDF } = window.jspdf;
+    // Receipt paper width ~80mm, height scales to content
+    const pdfWidthMM = 80;
+    const pdfHeightMM = (canvas.height * pdfWidthMM) / canvas.width;
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [pdfWidthMM, pdfHeightMM]
+    });
+    pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidthMM, pdfHeightMM);
+    pdf.save(filenameBase() + '.pdf');
+    setStatus('Zapisano PDF ✓');
+  } catch (err) {
+    console.error(err);
+    setStatus('Błąd podczas zapisu PDF');
+  }
+}
+</script>
+
+</body>
+</html>
