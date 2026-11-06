@@ -84,31 +84,40 @@
   .export-status { font-family: Arial, sans-serif; font-size: 22px; color: #666; text-align: center; margin-top: 4px; min-height: 14px; }
   .vat-row { display: grid; grid-template-columns: 1fr 60px 30px; gap: 6px; margin-top: 6px; }
 
-  /* --- RECEIPT --- */
-  #receipt-wrapper {
-    width: var(--paper-width);
-    background: #fff;
-    padding: 14px 16px 30px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.2);
-    font-family: 'Courier New', monospace;
-    font-size: 21.5px;
-    line-height: 1.35;
-    color: #111;
-  }
-  #receipt-wrapper .center { text-align: center; }
-  #receipt-wrapper .bold { font-weight: bold; }
-  #receipt-wrapper .big { font-size: 25px; font-weight: bold; }
-  #receipt-wrapper hr {
-    border: none;
-    border-top: 1px dashed #444;
-    margin: 6px 0;
-  }
-  #receipt-wrapper hr.dots { border-top: 2px dotted #444; }
-  #receipt-wrapper .line {
-    display: flex;
-    justify-content: space-between;
-    white-space: pre;
-  }
+/* --- RECEIPT --- */
+#receipt-wrapper {
+  width: var(--paper-width);
+  background: #fff;
+  padding: 14px 16px 30px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.2);
+  font-family: 'Courier New', monospace;
+  font-size: 21.5px;
+  line-height: 1.35;
+  color: #111;
+  overflow-wrap: anywhere;
+}
+#receipt-wrapper .center { text-align: center; }
+#receipt-wrapper .bold { font-weight: bold; }
+#receipt-wrapper .big { font-size: 25px; font-weight: bold; }
+#receipt-wrapper hr {
+  border: none;
+  border-top: 1px dashed #444;
+  margin: 6px 0;
+}
+#receipt-wrapper hr.dots { border-top: 2px dotted #444; }
+#receipt-wrapper .line {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  white-space: pre-wrap;
+}
+#receipt-wrapper .line > span:first-child { flex: 0 0 auto; white-space: pre; }
+#receipt-wrapper .line > span:last-child:not(:first-child) { flex: 1 1 0; min-width: 0; text-align: right; word-break: break-all; overflow-wrap: anywhere; }
+
+
+#receipt-wrapper .line > span { min-width: 0; overflow-wrap: anywhere; }
+#receipt-wrapper .line > span:last-child:not(:first-child) { text-align: right; }
   #receipt-wrapper .item-name {
     white-space: normal;
   }
