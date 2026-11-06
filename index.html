@@ -180,6 +180,8 @@
   <input id="sellerName" value="Jan Kowalski">
   <label>Nr kasy</label>
   <input id="registerNo" value="1">
+  <label>NIP nabywcy (opcjonalnie)</label>
+  <input id="buyerNip" placeholder="puste = tylko podpis">
   <label>Nr kasjera</label>
   <input id="cashierNo" value="1">
 
@@ -274,7 +276,6 @@ function barcodeHtml(value) {
   } catch (e) { return ''; }
 }
 
-const DEMO_LINE = 'DOKUMENT DEMONSTRACYJNY – NIE JEST PARAGONEM FISKALNYM';
 
 function renderReceipt() {
   const val = id => document.getElementById(id).value;
@@ -286,6 +287,7 @@ function renderReceipt() {
   const seller = esc(val('sellerName'));
   const registerNo = esc(val('registerNo'));
   const cashierNo = esc(val('cashierNo'));
+  const buyerNip = esc(val('buyerNip'));
   const receiptNo = esc(val('receiptNo'));
   const txnNo = esc(val('txnNo'));
   const vatRate = parseFloat(val('vatRate')) || 0;
@@ -334,7 +336,7 @@ function renderReceipt() {
     html = `
       ${header}
       <div class="center">${dateStr} ${timeStr}</div>
-      <div class="center big">RACHUNEK</div>
+      <div class="center big">PARAGON FISKALNY</div>
       <hr>
       ${itemsHtml}
       <hr>
@@ -366,17 +368,19 @@ function renderReceipt() {
       <hr>
       ${totalDiscount ? `<div class="line"><span>Suma obniżek:</span><span>${fmt(totalDiscount)}</span></div>` : ''}
       ${vatBlock}
+      <hr class="dots">
       <div class="suma"><span>SUMA:</span><span>PLN ${fmt(total)}</span></div>
       <hr class="dots">
       <div class="suma" style="font-size:23px"><span>DO ZAPŁATY:</span><span>${fmt(total)}</span></div>
-      <hr>
       <div class="center">ROZLICZENIE PŁATNOŚCI</div>
       <div class="line"><span>${payMethod}:</span><span>${fmt(total)}</span></div>
       ${cashGiven > 0 && change >= 0 ? `<div class="line"><span>Wpłacono:</span><span>${fmt(cashGiven)}</span></div><div class="line"><span>Reszta:</span><span>${fmt(change)}</span></div>` : ''}
       <hr>
       <div class="line"><span>#Kasa ${registerNo} Kasjer nr ${cashierNo}</span></div>
-      <div class="line"><span>${dateStr} ${timeStr}</span></div>
-      <div class="line"><span>Sprzedawca:</span><span>${seller}</span></div>
+      <div class="center bold">NIP nabywcy:${buyerNip ? ' ' + buyerNip : ''}</div>
+      <div class="right">${dateStr} ${timeStr}</div>
+      <hr class="dots">
+      <div class="center">Sprzedawca: ${seller}</div>
       <div class="line"><span>Nr rachunku:</span><span>${receiptNo}</span></div>
       <div class="line"><span>Nr transakcji:</span><span>${txnNo}</span></div>
       ${footer}`;
@@ -400,6 +404,7 @@ function renderReceipt() {
       <div class="line"><span>Sprzedaż opodatkowana A:</span><span>${fmt(total)}</span></div>
       <div class="line"><span>Kwota PTU A ${fmt(vatRate)}%</span><span>${fmt(vatAmount)}</span></div>
       <div class="line"><span>SUMA PTU</span><span>${fmt(vatAmount)}</span></div>
+      <hr class="dots">
       <div class="suma"><span>SUMA:</span><span>PLN ${fmt(total)}</span></div>
       <hr class="dots">
       <div class="suma" style="font-size:23px"><span>DO ZAPŁATY:</span><span>${fmt(total)}</span></div>
@@ -408,8 +413,10 @@ function renderReceipt() {
       ${cashGiven > 0 && change >= 0 ? `<div class="line"><span>Reszta:</span><span>${fmt(change)}</span></div>` : ''}
       <hr>
       <div class="line"><span>#Kasa ${registerNo} Kasjer nr ${cashierNo}</span></div>
+      <div class="center bold">NIP nabywcy:${buyerNip ? ' ' + buyerNip : ''}</div>
       <div class="right">${dateStr} ${timeStr}</div>
-      <div class="line"><span>Sprzedawca:</span><span>${seller}</span></div>
+      <hr class="dots">
+      <div class="center">Sprzedawca: ${seller}</div>
       <div class="line"><span>Nr rachunku:</span><span>${receiptNo}</span></div>
       <div class="line"><span>Nr transakcji:</span><span>${txnNo}</span></div>
       ${footer}`;
@@ -423,7 +430,7 @@ document.getElementById('dateTime').value = new Date().toISOString().slice(0,16)
 renderItemInputs();
 renderReceipt();
 
-document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #sellerName, #registerNo, #cashierNo, #receiptNo, #txnNo, #showBarcode, #dateTime, #vatRate, #payMethod, #cashGiven')
+document.querySelectorAll('#storeName, #addr1, #addr2, #nip, #sellerName, #registerNo, #cashierNo, #buyerNip, #receiptNo, #txnNo, #showBarcode, #dateTime, #vatRate, #payMethod, #cashGiven')
   .forEach(el => el.addEventListener('input', renderReceipt));
 document.getElementById('showBarcode').addEventListener('change', renderReceipt);
 
