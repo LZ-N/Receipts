@@ -125,7 +125,7 @@
     justify-content: space-between;
     margin-top: 4px;
   }
-  #receipt-wrapper .demo { font-size: 16px; text-align: center; margin-top: 12px; border-top: 1px dashed #444; padding-top: 6px; }
+  #receipt-wrapper .demo { font-size: 16px; text-align: center; margin-top: 12px; 1px dashed #444; padding-top: 6px; }
   #receipt-wrapper .one-line { display: flex; justify-content: space-between; gap: 6px; }
   #receipt-wrapper .one-line .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   #receipt-wrapper .barcode { text-align: center; margin-top: 10px; }
@@ -276,6 +276,7 @@ function barcodeHtml(value) {
   } catch (e) { return ''; }
 }
 
+const DEMO_LINE = '';
 
 function renderReceipt() {
   const val = id => document.getElementById(id).value;
@@ -362,7 +363,7 @@ function renderReceipt() {
       <div class="center">${addr1}, ${addr2}</div>
       <div class="center">NIP: ${nip}</div>
       <hr>
-      <div class="center big">RACHUNEK</div>
+      <div class="center big">PARAGON FISKALNY</div>
       <hr>
       ${itemsHtml}
       <hr>
@@ -380,7 +381,7 @@ function renderReceipt() {
       <div class="center bold">NIP nabywcy:${buyerNip ? ' ' + buyerNip : ''}</div>
       <div class="right">${dateStr} ${timeStr}</div>
       <hr class="dots">
-      <div class="center">Sprzedawca: ${seller}</div>
+      <div class="center">${seller}</div>
       <div class="line"><span>Nr rachunku:</span><span>${receiptNo}</span></div>
       <div class="line"><span>Nr transakcji:</span><span>${txnNo}</span></div>
       ${footer}`;
@@ -397,7 +398,7 @@ function renderReceipt() {
       <div class="center bold">${storeName}</div>
       <div class="center">${addr1} ${addr2}</div>
       <div class="center">NIP: ${nip}</div>
-      <div class="center big">RACHUNEK</div>
+      <div class="center big">PARAGON FISKALNY</div>
       <hr>
       ${itemsHtml}
       <hr>
@@ -416,7 +417,7 @@ function renderReceipt() {
       <div class="center bold">NIP nabywcy:${buyerNip ? ' ' + buyerNip : ''}</div>
       <div class="right">${dateStr} ${timeStr}</div>
       <hr class="dots">
-      <div class="center">Sprzedawca: ${seller}</div>
+      <div class="center">${seller}</div>
       <div class="line"><span>Nr rachunku:</span><span>${receiptNo}</span></div>
       <div class="line"><span>Nr transakcji:</span><span>${txnNo}</span></div>
       ${footer}`;
